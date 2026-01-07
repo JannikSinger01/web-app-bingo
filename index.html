@@ -1,0 +1,214 @@
+import React, { useState, useEffect } from 'react';
+import { Shuffle, RefreshCw, Trophy, Crown, Check, User } from 'lucide-react';
+
+// Eine Liste mit spaßigen Bingo-Begriffen (Office/Life Mix). 
+// Diese können beliebig erweitert werden.
+const BINGO_TERMS = [
+  "Kaffee ist leer", "Meeting überzogen", "Du bist gemuted", "Bildschirmfreigabe vergessen",
+  "Kannst du mich hören?", "WLAN Probleme", "Katze im Bild", "Zu spät gekommen",
+  "Smalltalk übers Wetter", "Deadline verschoben", "Excel stürzt ab", "GIF im Chat",
+  "Jemand isst im Call", "Kind schreit", "Schwarzer Bildschirm", "Echo im Audio",
+  "Falscher Name", "Tastatur klappert", "Phantom-Vibration", "Akku fast leer",
+  "Lustiger Hintergrund", "Jemand singt", "Augenrollen", "Termin vergessen",
+  "Mittagspause", "Feierabend-Bier", "Server down", "Passwort vergessen",
+  "Update läuft", "Maus ist weg", "Kamera aus", "Ungewollte Stille"
+];
+
+const GRID_SIZE = 4; // 4x4 Grid
+
+const App = () => {
+  const [players, setPlayers] = useState([]);
+  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
+  const [winner, setWinner] = useState(null);
+
+  // Initialisiert das Spiel beim Start
+  useEffect(() => {
+    startNewGame();
+  }, []);
+
+  // Funktion zum Mischen eines Arrays (Fisher-Yates Shuffle)
+  const shuffleArray = (array) => {
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
+  };
+
+  // Startet ein neues Spiel für 4 Personen
+  const startNewGame = () => {
+    const newPlayers = [];
+    for (let i = 1; i <= 4; i++) {
+      // Wähle zufällige Begriffe für diesen Spieler
+      const shuffledTerms = shuffleArray(BINGO_TERMS).slice(0, GRID_SIZE * GRID_SIZE);
+      newPlayers.push({
+        id: i,
+        name: `Spieler ${i}`,
+        board: shuffledTerms,
+        selected: Array(GRID_SIZE * GRID_SIZE).fill(false), // Speichert angekreuzte Felder
+        hasBingo: false
+      });
+    }
+    setPlayers(newPlayers);
+    setWinner(null);
+    setActivePlayerIndex(0);
+  };
+
+  // Prüft auf Gewinnbedingungen (Reihen, Spalten, Diagonalen)
+  const checkBingo = (selectedIndices) => {
+    const size = GRID_SIZE;
+    
+    // Reihen prüfen
+    for (let r = 0; r < size; r++) {
+      if (Array.from({ length: size }, (_, c) => r * size + c).every(idx => selectedIndices[idx])) return true;
+    }
+    
+    // Spalten prüfen
+    for (let c = 0; c < size; c++) {
+      if (Array.from({ length: size }, (_, r) => r * size + c).every(idx => selectedIndices[idx])) return true;
+    }
+    
+    // Diagonale links-oben nach rechts-unten
+    if (Array.from({ length: size }, (_, i) => i * size + i).every(idx => selectedIndices[idx])) return true;
+
+    // Diagonale rechts-oben nach links-unten
+    if (Array.from({ length: size }, (_, i) => i * size + (size - 1 - i)).every(idx => selectedIndices[idx])) return true;
+
+    return false;
+  };
+
+  // Klick auf ein Feld
+  const toggleCell = (cellIndex) => {
+    if (winner) return; // Spiel vorbei
+
+    setPlayers(prevPlayers => {
+      const updatedPlayers = [...prevPlayers];
+      const currentPlayer = { ...updatedPlayers[activePlayerIndex] };
+      
+      // Status umschalten
+      const newSelected = [...currentPlayer.selected];
+      newSelected[cellIndex] = !newSelected[cellIndex];
+      currentPlayer.selected = newSelected;
+
+      // Check auf Bingo
+      const isBingo = checkBingo(newSelected);
+      currentPlayer.hasBingo = isBingo;
+
+      updatedPlayers[activePlayerIndex] = currentPlayer;
+      
+      if (isBingo && !winner) {
+        setWinner(currentPlayer.name);
+      }
+
+      return updatedPlayers;
+    });
+  };
+
+  const activePlayer = players[activePlayerIndex];
+
+  if (!activePlayer) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Lade Vibe...</div>;
+
+  return (
+    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-pink-500 selection:text-white flex flex-col">
+      
+      {/* Header */}
+      <header className="p-4 md:p-6 bg-slate-800/50 backdrop-blur-md border-b border-slate-700 flex justify-between items-center sticky top-0 z-20">
+        <div className="flex items-center gap-2">
+          <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-2 rounded-lg shadow-lg shadow-purple-500/20">
+            <Crown className="w-6 h-6 text-white" />
+          </div>
+          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 hidden sm:block">
+            Vibe Bingo
+          </h1>
+        </div>
+        
+        <button 
+          onClick={startNewGame}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-full transition-all text-sm font-medium border border-slate-600"
+        >
+          <Shuffle className="w-4 h-4" />
+          <span className="hidden sm:inline">Alles Mischen</span>
+          <span className="sm:hidden">Neu</span>
+        </button>
+      </header>
+
+      <main className="flex-grow flex flex-col items-center justify-start pt-6 px-4 pb-10">
+        
+        {/* Winner Overlay */}
+        {winner && (
+          <div className="mb-8 p-6 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-2xl flex flex-col items-center animate-bounce">
+            <Trophy className="w-12 h-12 text-yellow-400 mb-2" />
+            <h2 className="text-3xl font-black text-yellow-300 uppercase tracking-wider">Bingo!</h2>
+            <p className="text-yellow-100 mt-1">{winner} hat gewonnen!</p>
+            <button 
+              onClick={startNewGame}
+              className="mt-4 text-sm underline text-yellow-200 hover:text-white"
+            >
+              Neue Runde starten
+            </button>
+          </div>
+        )}
+
+        {/* Player Tabs */}
+        <div className="w-full max-w-md bg-slate-800/60 p-1 rounded-xl flex gap-1 mb-6 overflow-x-auto">
+          {players.map((p, idx) => (
+            <button
+              key={p.id}
+              onClick={() => setActivePlayerIndex(idx)}
+              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                ${activePlayerIndex === idx 
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                }
+              `}
+            >
+              <User className="w-3 h-3" />
+              {p.name}
+              {p.hasBingo && <Trophy className="w-3 h-3 text-yellow-300 ml-1" />}
+            </button>
+          ))}
+        </div>
+
+        {/* Grid Area */}
+        <div className="w-full max-w-md aspect-square grid grid-cols-4 gap-2 sm:gap-3 p-3 bg-slate-800/40 rounded-2xl border border-slate-700 shadow-2xl">
+          {activePlayer.board.map((term, idx) => {
+            const isSelected = activePlayer.selected[idx];
+            return (
+              <button
+                key={idx}
+                onClick={() => toggleCell(idx)}
+                className={`
+                  relative rounded-xl p-1 flex items-center justify-center text-center text-[10px] sm:text-xs md:text-sm font-medium leading-tight select-none transition-all duration-300 overflow-hidden
+                  ${isSelected 
+                    ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-inner scale-95 ring-2 ring-pink-400/50' 
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:scale-105 hover:shadow-lg'
+                  }
+                `}
+              >
+                {/* Checkmark Icon Overlay for selected items */}
+                {isSelected && (
+                  <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                    <Check className="w-8 h-8 md:w-12 md:h-12" />
+                  </div>
+                )}
+                
+                <span className="z-10 px-1 break-words w-full">
+                  {term}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="mt-6 text-slate-500 text-xs text-center max-w-xs">
+          Spieler: {activePlayer.name} • Klicke auf ein Feld, um es zu markieren.
+          <br/>Wechsele oben die Tabs, um die Karten der anderen zu sehen.
+        </p>
+
+      </main>
+    </div>
+  );
+};
+
+export default App;

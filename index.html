@@ -1,210 +1,266 @@
-import React, { useState, useEffect } from 'react';
-import { Shuffle, RefreshCw, Trophy, Crown, Check, User } from 'lucide-react';
-
-// Eine Liste mit spaßigen Bingo-Begriffen (Office/Life Mix). 
-// Diese können beliebig erweitert werden.
-const BINGO_TERMS = [
-  "Wehner mit Zeitdruck", "Star-Wars-Referenz", "Tätigkeiten nach 12 Uhr", "Eigentliches Thema wird nicht behandelt",
-  "Der kleine Pauly Bashing", "Die Kinder haben was Neues gefunden", "Unrealistische Pläne", "Leinwand geht aus 3x",
-  "Saarland-Referenz", "Der große Ploetz", "Obsidian wird abgefeiert", "Haben sie in dieser Woche keine 3 Web-Apps erstellt?",
-  "Referenz in die 90er", "KI-Geschichtslied entwickelt", "Rass verliert 3x den Faden", "neue KI wird vorgestellt",
-];
-
-const GRID_SIZE = 4; // 4x4 Grid
-
-const App = () => {
-  const [players, setPlayers] = useState([]);
-  const [activePlayerIndex, setActivePlayerIndex] = useState(0);
-  const [winner, setWinner] = useState(null);
-
-  // Initialisiert das Spiel beim Start
-  useEffect(() => {
-    startNewGame();
-  }, []);
-
-  // Funktion zum Mischen eines Arrays (Fisher-Yates Shuffle)
-  const shuffleArray = (array) => {
-    const newArray = [...array];
-    for (let i = newArray.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
-    }
-    return newArray;
-  };
-
-  // Startet ein neues Spiel für 4 Personen
-  const startNewGame = () => {
-    const newPlayers = [];
-    for (let i = 1; i <= 4; i++) {
-      // Wähle zufällige Begriffe für diesen Spieler
-      const shuffledTerms = shuffleArray(BINGO_TERMS).slice(0, GRID_SIZE * GRID_SIZE);
-      newPlayers.push({
-        id: i,
-        name: `Spieler ${i}`,
-        board: shuffledTerms,
-        selected: Array(GRID_SIZE * GRID_SIZE).fill(false), // Speichert angekreuzte Felder
-        hasBingo: false
-      });
-    }
-    setPlayers(newPlayers);
-    setWinner(null);
-    setActivePlayerIndex(0);
-  };
-
-  // Prüft auf Gewinnbedingungen (Reihen, Spalten, Diagonalen)
-  const checkBingo = (selectedIndices) => {
-    const size = GRID_SIZE;
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vibe Bingo</title>
     
-    // Reihen prüfen
-    for (let r = 0; r < size; r++) {
-      if (Array.from({ length: size }, (_, c) => r * size + c).every(idx => selectedIndices[idx])) return true;
-    }
+    <!-- React und ReactDOM laden -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     
-    // Spalten prüfen
-    for (let c = 0; c < size; c++) {
-      if (Array.from({ length: size }, (_, r) => r * size + c).every(idx => selectedIndices[idx])) return true;
-    }
+    <!-- Babel für JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     
-    // Diagonale links-oben nach rechts-unten
-    if (Array.from({ length: size }, (_, i) => i * size + i).every(idx => selectedIndices[idx])) return true;
+    <!-- Tailwind CSS laden -->
+    <script src="https://cdn.tailwindcss.com"></script>
 
-    // Diagonale rechts-oben nach links-unten
-    if (Array.from({ length: size }, (_, i) => i * size + (size - 1 - i)).every(idx => selectedIndices[idx])) return true;
-
-    return false;
-  };
-
-  // Klick auf ein Feld
-  const toggleCell = (cellIndex) => {
-    if (winner) return; // Spiel vorbei
-
-    setPlayers(prevPlayers => {
-      const updatedPlayers = [...prevPlayers];
-      const currentPlayer = { ...updatedPlayers[activePlayerIndex] };
-      
-      // Status umschalten
-      const newSelected = [...currentPlayer.selected];
-      newSelected[cellIndex] = !newSelected[cellIndex];
-      currentPlayer.selected = newSelected;
-
-      // Check auf Bingo
-      const isBingo = checkBingo(newSelected);
-      currentPlayer.hasBingo = isBingo;
-
-      updatedPlayers[activePlayerIndex] = currentPlayer;
-      
-      if (isBingo && !winner) {
-        setWinner(currentPlayer.name);
-      }
-
-      return updatedPlayers;
-    });
-  };
-
-  const activePlayer = players[activePlayerIndex];
-
-  if (!activePlayer) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Lade Vibe...</div>;
-
-  return (
-    <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-pink-500 selection:text-white flex flex-col">
-      
-      {/* Header */}
-      <header className="p-4 md:p-6 bg-slate-800/50 backdrop-blur-md border-b border-slate-700 flex justify-between items-center sticky top-0 z-20">
-        <div className="flex items-center gap-2">
-          <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-2 rounded-lg shadow-lg shadow-purple-500/20">
-            <Crown className="w-6 h-6 text-white" />
-          </div>
-          <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 hidden sm:block">
-            Vibe Bingo
-          </h1>
-        </div>
-        
-        <button 
-          onClick={startNewGame}
-          className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-full transition-all text-sm font-medium border border-slate-600"
-        >
-          <Shuffle className="w-4 h-4" />
-          <span className="hidden sm:inline">Alles Mischen</span>
-          <span className="sm:hidden">Neu</span>
-        </button>
-      </header>
-
-      <main className="flex-grow flex flex-col items-center justify-start pt-6 px-4 pb-10">
-        
-        {/* Winner Overlay */}
-        {winner && (
-          <div className="mb-8 p-6 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-2xl flex flex-col items-center animate-bounce">
-            <Trophy className="w-12 h-12 text-yellow-400 mb-2" />
-            <h2 className="text-3xl font-black text-yellow-300 uppercase tracking-wider">Bingo!</h2>
-            <p className="text-yellow-100 mt-1">{winner} hat gewonnen!</p>
-            <button 
-              onClick={startNewGame}
-              className="mt-4 text-sm underline text-yellow-200 hover:text-white"
-            >
-              Neue Runde starten
-            </button>
-          </div>
-        )}
-
-        {/* Player Tabs */}
-        <div className="w-full max-w-md bg-slate-800/60 p-1 rounded-xl flex gap-1 mb-6 overflow-x-auto">
-          {players.map((p, idx) => (
-            <button
-              key={p.id}
-              onClick={() => setActivePlayerIndex(idx)}
-              className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
-                ${activePlayerIndex === idx 
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
+    <!-- Tailwind Config für Custom Fonts/Colors falls nötig -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    },
                 }
-              `}
-            >
-              <User className="w-3 h-3" />
-              {p.name}
-              {p.hasBingo && <Trophy className="w-3 h-3 text-yellow-300 ml-1" />}
-            </button>
-          ))}
-        </div>
+            }
+        }
+    </script>
+    
+    <style>
+        body { margin: 0; background-color: #0f172a; }
+        /* Smooth rendering for icons */
+        svg { vertical-align: middle; }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
 
-        {/* Grid Area */}
-        <div className="w-full max-w-md aspect-square grid grid-cols-4 gap-2 sm:gap-3 p-3 bg-slate-800/40 rounded-2xl border border-slate-700 shadow-2xl">
-          {activePlayer.board.map((term, idx) => {
-            const isSelected = activePlayer.selected[idx];
-            return (
-              <button
-                key={idx}
-                onClick={() => toggleCell(idx)}
-                className={`
-                  relative rounded-xl p-1 flex items-center justify-center text-center text-[10px] sm:text-xs md:text-sm font-medium leading-tight select-none transition-all duration-300 overflow-hidden
-                  ${isSelected 
-                    ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-inner scale-95 ring-2 ring-pink-400/50' 
-                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:scale-105 hover:shadow-lg'
-                  }
-                `}
-              >
-                {/* Checkmark Icon Overlay for selected items */}
-                {isSelected && (
-                  <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
-                    <Check className="w-8 h-8 md:w-12 md:h-12" />
-                  </div>
-                )}
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        // --- Icons als Komponenten (Inline SVGs für Standalone-Fähigkeit) ---
+        
+        const Crown = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="m2 4 3 12h14l3-12-6 7-4-3-4 3-6-7z"/></svg>
+        );
+
+        const Shuffle = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M2 18h1.4c1.3 0 2.5-.6 3.3-1.7l14.2-12.6"/><path d="m21.5 21.5-1.4-1.4"/><path d="M21.5 2.5l-1.4 1.4"/><path d="M2 6h1.4c1.3 0 2.5.6 3.3 1.7l14.2 12.6"/></svg>
+        );
+
+        const Trophy = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        );
+
+        const Check = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M20 6 9 17l-5-5"/></svg>
+        );
+
+        const User = ({ className }) => (
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+        );
+
+
+        // --- App Logik ---
+
+        const BINGO_TERMS = [
+            "Wehner mit Zeitdruck", "Star-Wars-Referenz", "Tätigkeiten nach 12 Uhr", "Eigentliches Thema wird nicht behandelt",
+            "Der kleine Pauly Bashing", "Die Kinder haben was Neues gefunden", "Unrealistische Pläne", "Leinwand geht aus 3x",
+            "Saarland-Referenz", "Der große Ploetz", "Obsidian wird abgefeiert", "Haben sie in dieser Woche keine 3 Web-Apps erstellt?",
+            "Referenz in die 90er", "KI-Geschichtslied entwickelt", "Rass verliert 3x den Faden", "neue KI wird vorgestellt",
+        ];
+
+        const GRID_SIZE = 4;
+
+        const App = () => {
+            const [players, setPlayers] = useState([]);
+            const [activePlayerIndex, setActivePlayerIndex] = useState(0);
+            const [winner, setWinner] = useState(null);
+
+            useEffect(() => {
+                startNewGame();
+            }, []);
+
+            const shuffleArray = (array) => {
+                const newArray = [...array];
+                for (let i = newArray.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+                }
+                return newArray;
+            };
+
+            const startNewGame = () => {
+                const newPlayers = [];
+                for (let i = 1; i <= 4; i++) {
+                const shuffledTerms = shuffleArray(BINGO_TERMS).slice(0, GRID_SIZE * GRID_SIZE);
+                newPlayers.push({
+                    id: i,
+                    name: `Spieler ${i}`,
+                    board: shuffledTerms,
+                    selected: Array(GRID_SIZE * GRID_SIZE).fill(false),
+                    hasBingo: false
+                });
+                }
+                setPlayers(newPlayers);
+                setWinner(null);
+                setActivePlayerIndex(0);
+            };
+
+            const checkBingo = (selectedIndices) => {
+                const size = GRID_SIZE;
                 
-                <span className="z-10 px-1 break-words w-full">
-                  {term}
-                </span>
-              </button>
+                // Reihen
+                for (let r = 0; r < size; r++) {
+                if (Array.from({ length: size }, (_, c) => r * size + c).every(idx => selectedIndices[idx])) return true;
+                }
+                
+                // Spalten
+                for (let c = 0; c < size; c++) {
+                if (Array.from({ length: size }, (_, r) => r * size + c).every(idx => selectedIndices[idx])) return true;
+                }
+                
+                // Diagonalen
+                if (Array.from({ length: size }, (_, i) => i * size + i).every(idx => selectedIndices[idx])) return true;
+                if (Array.from({ length: size }, (_, i) => i * size + (size - 1 - i)).every(idx => selectedIndices[idx])) return true;
+
+                return false;
+            };
+
+            const toggleCell = (cellIndex) => {
+                if (winner) return;
+
+                setPlayers(prevPlayers => {
+                const updatedPlayers = [...prevPlayers];
+                const currentPlayer = { ...updatedPlayers[activePlayerIndex] };
+                
+                const newSelected = [...currentPlayer.selected];
+                newSelected[cellIndex] = !newSelected[cellIndex];
+                currentPlayer.selected = newSelected;
+
+                const isBingo = checkBingo(newSelected);
+                currentPlayer.hasBingo = isBingo;
+
+                updatedPlayers[activePlayerIndex] = currentPlayer;
+                
+                if (isBingo && !winner) {
+                    setWinner(currentPlayer.name);
+                }
+
+                return updatedPlayers;
+                });
+            };
+
+            const activePlayer = players[activePlayerIndex];
+
+            if (!activePlayer) return <div className="min-h-screen bg-slate-900 flex items-center justify-center text-white">Lade Vibe...</div>;
+
+            return (
+                <div className="min-h-screen bg-slate-900 text-slate-100 font-sans selection:bg-pink-500 selection:text-white flex flex-col">
+                
+                {/* Header */}
+                <header className="p-4 md:p-6 bg-slate-800/50 backdrop-blur-md border-b border-slate-700 flex justify-between items-center sticky top-0 z-20">
+                    <div className="flex items-center gap-2">
+                    <div className="bg-gradient-to-br from-pink-500 to-purple-600 p-2 rounded-lg shadow-lg shadow-purple-500/20">
+                        <Crown className="w-6 h-6 text-white" />
+                    </div>
+                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-pink-400 to-purple-400 hidden sm:block">
+                        Vibe Bingo
+                    </h1>
+                    </div>
+                    
+                    <button 
+                    onClick={startNewGame}
+                    className="flex items-center gap-2 px-4 py-2 bg-slate-700 hover:bg-slate-600 active:bg-slate-500 rounded-full transition-all text-sm font-medium border border-slate-600"
+                    >
+                    <Shuffle className="w-4 h-4" />
+                    <span className="hidden sm:inline">Alles Mischen</span>
+                    <span className="sm:hidden">Neu</span>
+                    </button>
+                </header>
+
+                <main className="flex-grow flex flex-col items-center justify-start pt-6 px-4 pb-10">
+                    
+                    {/* Winner Overlay */}
+                    {winner && (
+                    <div className="mb-8 p-6 bg-gradient-to-r from-yellow-500/20 to-orange-500/20 border border-yellow-500/50 rounded-2xl flex flex-col items-center animate-bounce">
+                        <Trophy className="w-12 h-12 text-yellow-400 mb-2" />
+                        <h2 className="text-3xl font-black text-yellow-300 uppercase tracking-wider">Bingo!</h2>
+                        <p className="text-yellow-100 mt-1">{winner} hat gewonnen!</p>
+                        <button 
+                        onClick={startNewGame}
+                        className="mt-4 text-sm underline text-yellow-200 hover:text-white"
+                        >
+                        Neue Runde starten
+                        </button>
+                    </div>
+                    )}
+
+                    {/* Player Tabs */}
+                    <div className="w-full max-w-md bg-slate-800/60 p-1 rounded-xl flex gap-1 mb-6 overflow-x-auto">
+                    {players.map((p, idx) => (
+                        <button
+                        key={p.id}
+                        onClick={() => setActivePlayerIndex(idx)}
+                        className={`flex-1 py-2 px-3 rounded-lg text-sm font-medium transition-all flex items-center justify-center gap-2 whitespace-nowrap
+                            ${activePlayerIndex === idx 
+                            ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg' 
+                            : 'text-slate-400 hover:text-white hover:bg-slate-700'
+                            }
+                        `}
+                        >
+                        <User className="w-3 h-3" />
+                        {p.name}
+                        {p.hasBingo && <Trophy className="w-3 h-3 text-yellow-300 ml-1" />}
+                        </button>
+                    ))}
+                    </div>
+
+                    {/* Grid Area */}
+                    <div className="w-full max-w-md aspect-square grid grid-cols-4 gap-2 sm:gap-3 p-3 bg-slate-800/40 rounded-2xl border border-slate-700 shadow-2xl">
+                    {activePlayer.board.map((term, idx) => {
+                        const isSelected = activePlayer.selected[idx];
+                        return (
+                        <button
+                            key={idx}
+                            onClick={() => toggleCell(idx)}
+                            className={`
+                            relative rounded-xl p-1 flex items-center justify-center text-center text-[10px] sm:text-xs md:text-sm font-medium leading-tight select-none transition-all duration-300 overflow-hidden
+                            ${isSelected 
+                                ? 'bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-inner scale-95 ring-2 ring-pink-400/50' 
+                                : 'bg-slate-700 text-slate-300 hover:bg-slate-600 hover:scale-105 hover:shadow-lg'
+                            }
+                            `}
+                        >
+                            {/* Checkmark Icon Overlay */}
+                            {isSelected && (
+                            <div className="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none">
+                                <Check className="w-8 h-8 md:w-12 md:h-12" />
+                            </div>
+                            )}
+                            
+                            <span className="z-10 px-1 break-words w-full">
+                            {term}
+                            </span>
+                        </button>
+                        );
+                    })}
+                    </div>
+
+                    <p className="mt-6 text-slate-500 text-xs text-center max-w-xs">
+                    Spieler: {activePlayer.name} • Klicke auf ein Feld, um es zu markieren.
+                    <br/>Wechsele oben die Tabs, um die Karten der anderen zu sehen.
+                    </p>
+
+                </main>
+                </div>
             );
-          })}
-        </div>
+        };
 
-        <p className="mt-6 text-slate-500 text-xs text-center max-w-xs">
-          Spieler: {activePlayer.name} • Klicke auf ein Feld, um es zu markieren.
-          <br/>Wechsele oben die Tabs, um die Karten der anderen zu sehen.
-        </p>
-
-      </main>
-    </div>
-  );
-};
-
-export default App;
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
